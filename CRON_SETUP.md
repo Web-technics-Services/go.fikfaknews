@@ -7,7 +7,7 @@ The system automatically updates your website **within 10-20 seconds** of your v
 ### Files Created:
 
 1. **latest-video.json** - Stores the current video data
-2. **update-latest-video.php** - PHP script that checks YouTube and updates files
+2. **update-latest-video.php** - PHP script that checks YouTube and updates the JSON cache plus crawler-visible metadata
 3. **CRON_SETUP.md** - This file (instructions)
 
 ## Quick Setup (5 minutes):
@@ -94,7 +94,7 @@ You should see entries like:
 1. **YouTube Data API** (with API key): Updates **instantly** when video goes public
 2. **RSS Feed** (fallback): Updates in 5-15 minutes if no API key
 3. **Cron job**: Checks every 10-30 seconds during publish window
-4. **Automatic updates**: JSON file, HTML meta tags, everything!
+4. **Automatic updates**: JSON file and server-rendered HTML meta tags, so social crawlers receive the latest episode without JavaScript
 
 ### What Gets Updated Automatically:
 
@@ -159,4 +159,3 @@ The website will pick it up immediately!
 ## Questions?
 
 The system is fully automatic once set up. Every Sunday at 8am your email goes out, and within 10-20 seconds your website is live with the new video! 🚀
-

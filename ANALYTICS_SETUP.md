@@ -6,19 +6,22 @@ Google Analytics 4 (GA4) has been integrated into your FikFak News website to tr
 
 ## 🔧 Configuration Required
 
-**IMPORTANT:** Replace the placeholder measurement ID with your actual Google Analytics ID:
+The site uses Google Analytics measurement ID `G-P21HBDN7P8`:
 
 1. Go to [Google Analytics](https://analytics.google.com/)
-2. Create a new GA4 property for `go.fikfak.news`
-3. Get your Measurement ID (format: `G-Z9XCT4V4RG`)
-4. In [index.html](index.html), find line 7-8 and replace `G-XXXXXXXXXX` with your actual ID in both locations:
+2. Open the GA4 property for `go.fikfak.news`
+3. Confirm the Measurement ID is `G-P21HBDN7P8`
+4. The tag in [index.html](index.html) is configured as follows:
 
-```javascript
-// Line 8
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z9XCT4V4RG"></script>
+```html
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P21HBDN7P8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
 
-// Line 13
-gtag('config', 'G-Z9XCT4V4RG', {
+  gtag('config', 'G-P21HBDN7P8');
+</script>
 ```
 
 ## 📈 Events Being Tracked
@@ -154,7 +157,7 @@ You can use simple solutions like:
 ## 🚀 Testing Your Setup
 
 ### Before Going Live:
-1. Replace `G-XXXXXXXXXX` with your real Measurement ID
+1. Confirm the configured Measurement ID is `G-P21HBDN7P8`
 2. Open the website in a browser
 3. Open browser DevTools → Network tab
 4. Look for requests to `google-analytics.com` or `googletagmanager.com`

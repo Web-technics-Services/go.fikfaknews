@@ -13,16 +13,14 @@ $published = $latest['published'] ?? date('c');
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Google Analytics 4 -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z9XCT4V4RG"></script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P21HBDN7P8"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-Z9XCT4V4RG', {
-      'anonymize_ip': true,
-      'cookie_flags': 'SameSite=None;Secure'
-    });
+
+    gtag('config', 'G-P21HBDN7P8');
   </script>
   <!-- Security Meta Tags -->
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">

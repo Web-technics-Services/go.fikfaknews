@@ -2,13 +2,14 @@
 /**
  * Automatic Video Update Script for FikFak News
  * This script checks YouTube Data API (instant) and RSS feed,
- * then updates latest-video.json only.
- * The static homepage reads this data from latest-video.json in the browser.
+ * then updates latest-video.json and the crawler-visible metadata in index.html.
+ * Browsers also read latest-video.json so the player and share metadata stay aligned.
  * Run via cron every 10-20 seconds on Sunday mornings around 8am.
  */
 
 $channelId = 'UCkhqAfTIr2U5RU9ziyGfu_A';
 $jsonFile = __DIR__ . '/latest-video.json';
+$homepageFile = __DIR__ . '/index.html';
 
 // YouTube Data API Key (fallback to RSS when empty or failing)
 $youtubeApiKey = 'AIzaSyChLF03TKUUlVZ9PdUNJ7upIswryBIyEc8';
@@ -117,6 +118,86 @@ function getLatestVideoFromRSS($channelId) {
     ];
 }
 
+function writeFileAtomically($path, $contents) {
+    $temporaryPath = $path . '.tmp';
+    if (file_put_contents($temporaryPath, $contents, LOCK_EX) === false) {
+        error_log("Failed to write temporary file: {$temporaryPath}");
+        return false;
+    }
+
+    if (!rename($temporaryPath, $path)) {
+        @unlink($temporaryPath);
+        error_log("Failed to replace file: {$path}");
+        return false;
+    }
+
+    return true;
+}
+
+function updateHomepageMetadata($homepageFile, $latestVideo) {
+    if (!file_exists($homepageFile)) {
+        error_log("Homepage not found: {$homepageFile}");
+        return false;
+    }
+
+    $videoId = $latestVideo['videoId'] ?? '';
+    $title = $latestVideo['title'] ?? '';
+    $published = $latestVideo['published'] ?? '';
+    if (!preg_match('/^[A-Za-z0-9_-]{11}$/', $videoId) || $title === '' || strtotime($published) === false) {
+        error_log('Refusing to update homepage with invalid video metadata');
+        return false;
+    }
+
+    $html = file_get_contents($homepageFile);
+    if ($html === false) {
+        error_log("Failed to read homepage: {$homepageFile}");
+        return false;
+    }
+
+    if (!preg_match('/<meta property="og:video" content="https:\/\/www\.youtube\.com\/embed\/([A-Za-z0-9_-]{11})"/', $html, $idMatch)
+        || !preg_match('/<meta property="og:title" content="(.*?) \| FikFak News"/', $html, $titleMatch)
+        || !preg_match('/<meta property="article:published_time" content="([^"]+)"/', $html, $publishedMatch)) {
+        error_log('Could not identify the existing homepage metadata');
+        return false;
+    }
+
+    $oldVideoId = $idMatch[1];
+    $oldTitle = html_entity_decode($titleMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $oldPublished = $publishedMatch[1];
+
+    $oldHtmlTitle = htmlspecialchars($oldTitle, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $newHtmlTitle = htmlspecialchars($title, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $oldJsonTitle = substr(json_encode($oldTitle, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), 1, -1);
+    $newJsonTitle = substr(json_encode($title, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), 1, -1);
+
+    $metadataMarker = '<!-- Schema.org JSON-LD Structured Data -->';
+    $htmlParts = explode($metadataMarker, $html, 2);
+    if (count($htmlParts) !== 2) {
+        error_log('Could not identify the structured data boundary in the homepage');
+        return false;
+    }
+
+    $htmlParts[0] = str_replace($oldHtmlTitle, $newHtmlTitle, $htmlParts[0]);
+    $htmlParts[1] = str_replace($oldJsonTitle, $newJsonTitle, $htmlParts[1]);
+    $updatedHtml = implode($metadataMarker, $htmlParts);
+    $updatedHtml = str_replace(
+        [$oldVideoId, $oldPublished],
+        [$videoId, $published],
+        $updatedHtml
+    );
+
+    if ($updatedHtml === $html) {
+        return true;
+    }
+
+    if (!writeFileAtomically($homepageFile, $updatedHtml)) {
+        return false;
+    }
+
+    echo "SUCCESS: Updated crawler-visible homepage metadata for video {$videoId}\n";
+    return true;
+}
+
 $currentData = null;
 if (file_exists($jsonFile)) {
     $decodedCurrent = json_decode((string) file_get_contents($jsonFile), true);
@@ -147,6 +228,11 @@ if ($latestVideo === null) {
     exit(1);
 }
 
+if (!updateHomepageMetadata($homepageFile, $latestVideo)) {
+    error_log('Homepage metadata update failed; JSON was not changed to avoid inconsistent sharing data');
+    exit(1);
+}
+
 $needsUpdate = false;
 $updateReason = '';
 
@@ -165,7 +251,14 @@ if ($currentData === null) {
 }
 
 if ($needsUpdate) {
-    file_put_contents($jsonFile, json_encode($latestVideo, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $encodedLatestVideo = json_encode(
+        $latestVideo,
+        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+    );
+    if ($encodedLatestVideo === false || !writeFileAtomically($jsonFile, $encodedLatestVideo . PHP_EOL)) {
+        error_log('Failed to update latest-video.json');
+        exit(1);
+    }
     error_log("✅ Updated JSON: {$updateReason} - {$latestVideo['videoId']} - {$latestVideo['title']}");
     echo "SUCCESS: Updated JSON ({$updateReason}) - video {$latestVideo['videoId']}\n";
 } else {
